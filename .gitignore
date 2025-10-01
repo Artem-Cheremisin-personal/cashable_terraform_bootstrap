@@ -1,0 +1,51 @@
+# -------------------------------
+# Terraform
+# -------------------------------
+**/.terraform/
+**/.terraform.lock.hcl
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfplan
+**/crash.log
+**/crash.*.log
+
+# Override files (local customizations)
+**/override.tf
+**/override.tf.json
+**/*_override.tf
+**/*_override.tf.json
+
+# Module/package archives
+**/*.zip
+**/*.tar.gz
+**/*.tgz
+
+# -------------------------------
+# Terragrunt
+# -------------------------------
+**/.terragrunt-cache/
+**/terragrunt-debug.tfvars.json
+
+# -------------------------------
+# Puppet
+# -------------------------------
+**/*.log
+**/reports/
+**/state/
+**/statedir/
+**/yaml/
+**/facts.d/
+**/tmp/
+**/.boltdir/
+**/.r10k-deploy.json
+**/.moduledir/
+
+# -------------------------------
+# Editors / OS
+# -------------------------------
+**/.DS_Store
+**/Thumbs.db
+**/.idea/
+**/.vscode/
+**/*.swp
+**/*.swo
