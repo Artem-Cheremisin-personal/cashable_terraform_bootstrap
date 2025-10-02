@@ -1,3 +1,9 @@
+variable "region" {
+  description = "AWS region"
+  type        = string
+  default     = "eu-central-1"
+}
+
 variable "name" {
   description = "Name of the Application Load Balancer"
   type        = string
@@ -75,7 +81,79 @@ variable "vpc_id" {
 }
 
 variable "app_target_group_arn" {
-  description = "ARN of the app target group to forward traffic to"
+  description = "ARN of the target group to use for the default action"
   type        = string
   default     = ""
 }
+
+# Target Group Configuration
+variable "target_group_name" {
+  description = "Name of the target group"
+  type        = string
+}
+
+variable "target_group_port" {
+  description = "Port for the target group"
+  type        = number
+}
+
+variable "target_group_protocol" {
+  description = "Protocol for the target group"
+  type        = string
+  default     = "HTTP"
+}
+
+# Health Check Configuration
+variable "health_check_healthy_threshold" {
+  description = "Number of consecutive health checks successes required"
+  type        = number
+  default     = 2
+}
+
+variable "health_check_interval" {
+  description = "Interval between health checks"
+  type        = number
+  default     = 30
+}
+
+variable "health_check_matcher" {
+  description = "HTTP response codes to consider healthy"
+  type        = string
+  default     = "200"
+}
+
+variable "health_check_path" {
+  description = "Health check path"
+  type        = string
+  default     = "/"
+}
+
+variable "health_check_timeout" {
+  description = "Health check timeout"
+  type        = number
+  default     = 5
+}
+
+variable "health_check_unhealthy_threshold" {
+  description = "Number of consecutive health check failures required"
+  type        = number
+  default     = 5
+}
+
+variable "target_groups" {
+  description = "Map of target groups to create"
+  type = map(object({
+    name                            = string
+    port                            = number
+    protocol                        = string
+    health_check_healthy_threshold  = number
+    health_check_interval           = number
+    health_check_matcher            = string
+    health_check_path               = string
+    health_check_timeout            = number
+    health_check_unhealthy_threshold = number
+  }))
+  default = {}
+}
+
+

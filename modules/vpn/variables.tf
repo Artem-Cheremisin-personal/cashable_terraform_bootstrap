@@ -35,6 +35,11 @@ variable "client_cidr" {
   default     = "10.10.0.0/16"
 }
 
+variable "vpc_dns_resolver" {
+  description = "VPC DNS resolver IP address"
+  type        = string
+}
+
 variable "tags" {
   description = "A map of tags to assign to the resource"
   type        = map(string)

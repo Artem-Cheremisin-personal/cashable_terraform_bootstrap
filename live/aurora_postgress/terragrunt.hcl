@@ -8,13 +8,6 @@ terraform {
 
 dependency "vpc" {
   config_path = "../vpc"
-  
-  mock_outputs = {
-    vpc_id = "vpc-mockid123"
-    db_subnet_ids = ["subnet-mock1", "subnet-mock2", "subnet-mock3"]
-    db_subnet_group_name = "mock-db-subnet-group"
-    database_sg_id = "sg-mockdb123"
-  }
 }
 
 inputs = {
@@ -29,7 +22,7 @@ inputs = {
   
   # Instance configuration
   instance_class = "db.t3.medium"
-  instance_count = 2
+  instance_count = 3
   
   # Enable Multi-AZ for high availability
   multi_az = true
@@ -38,7 +31,7 @@ inputs = {
   db_subnet_group_name = dependency.vpc.outputs.db_subnet_group_name
   
   # IAM authentication enabled
-  iam_database_authentication_enabled = true
+  iam_database_authentication_enabled = false
   # IAM roles will be added later after IAM module creates them
   
   # Database settings

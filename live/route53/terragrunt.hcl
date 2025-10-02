@@ -8,18 +8,10 @@ terraform {
 
 dependency "vpc" {
   config_path = "../vpc"
-  
-  mock_outputs = {
-    vpc_id = "vpc-mockid123"
-  }
 }
 
 dependency "aurora" {
   config_path = "../aurora_postgress"
-  
-  mock_outputs = {
-    aurora_endpoint = "mock-aurora-endpoint.amazonaws.com"
-  }
 }
 
 inputs = {

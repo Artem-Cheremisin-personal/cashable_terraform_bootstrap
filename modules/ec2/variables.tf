@@ -30,6 +30,14 @@ variable "vpc_id" {
   type        = string
 }
 
+variable "target_group_arns" {
+  description = "List of target group ARNs to associate with the ASG"
+  type        = list(string)
+  default     = []
+}
+
+
+
 # Auto Scaling Group Configuration
 variable "min_size" {
   description = "Minimum number of instances in ASG"
@@ -149,9 +157,9 @@ variable "health_check_unhealthy_threshold" {
 }
 
 variable "db_secret_arn" {
-  description = "ARN of the database secret in AWS Secrets Manager"
+  description = "The ARN of the secret containing the database credentials"
   type        = string
-  default     = ""
+  default     = null
 }
 
 variable "aws_region" {

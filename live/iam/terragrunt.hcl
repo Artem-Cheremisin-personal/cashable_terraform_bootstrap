@@ -6,13 +6,16 @@ terraform {
   source = "../../modules/iam"
 }
 
+dependency "vpc" {
+  config_path = "../vpc"
+}
+
 dependency "aurora" {
   config_path = "../aurora_postgress"
-  
-  mock_outputs = {
-    aurora_cluster_arn = "arn:aws:rds:eu-central-1:123456789012:cluster:mock-aurora-cluster"
-    rds_iam_auth_resource_arn = "arn:aws:rds-db:eu-central-1:123456789012:dbuser:mock-aurora-cluster/*"
-  }
+}
+
+dependency "route53" {
+  config_path = "../route53"
 }
 
 inputs = {

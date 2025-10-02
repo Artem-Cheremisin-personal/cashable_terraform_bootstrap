@@ -7,7 +7,7 @@ output "complete_ovpn_config" {
 client
 dev tun
 proto udp
-remote ${aws_ec2_client_vpn_endpoint.this.dns_name} 443
+remote ${replace(aws_ec2_client_vpn_endpoint.this.dns_name, "*.", "")} 443
 resolv-retry infinite
 nobind
 remote-random-hostname

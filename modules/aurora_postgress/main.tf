@@ -18,19 +18,25 @@ provider "aws" {
   region = var.region
 }
 
-# Data source to get current AWS account ID
+# Get current AWS account ID
 data "aws_caller_identity" "current" {}
 
-# Aurora cluster with AWS managed password
+# Generate a random password for the Aurora cluster
+resource "random_password" "aurora_master_password" {
+  length  = 32
+  special = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
+# Aurora cluster with explicit master password
 resource "aws_rds_cluster" "aurora" {
   cluster_identifier = var.cluster_identifier
   engine             = "aurora-postgresql"
   engine_version     = var.engine_version
   
-  # Use AWS managed master user password (creates secret automatically)
-  manage_master_user_password = true
-  master_username            = var.master_username
-  database_name              = var.database_name
+  master_username = var.master_username
+  master_password = random_password.aurora_master_password.result
+  database_name   = var.database_name
   
   # Networking
   db_subnet_group_name   = var.db_subnet_group_name
@@ -67,13 +73,9 @@ resource "aws_secretsmanager_secret" "database_connection" {
   tags = var.tags
 }
 
-# Use data source to get the AWS managed secret password
-data "aws_secretsmanager_secret_version" "aurora_master" {
-  secret_id = aws_rds_cluster.aurora.master_user_secret[0].secret_arn
-}
-
+# Use the same password we generated for Aurora
 locals {
-  aurora_password = jsondecode(data.aws_secretsmanager_secret_version.aurora_master.secret_string)["password"]
+  aurora_password = random_password.aurora_master_password.result
 }
 
 resource "aws_secretsmanager_secret_version" "database_connection" {
@@ -86,6 +88,12 @@ resource "aws_secretsmanager_secret_version" "database_connection" {
     username = aws_rds_cluster.aurora.master_username
     password = local.aurora_password
   })
+  
+  # Ensure this waits for both the Aurora cluster and password generation
+  depends_on = [
+    aws_rds_cluster.aurora,
+    random_password.aurora_master_password
+  ]
 }
 
 # Aurora cluster instances

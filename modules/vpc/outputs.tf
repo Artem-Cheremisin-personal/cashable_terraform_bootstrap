@@ -78,3 +78,8 @@ output "database_sg_id" {
   description = "ID of the Database security group"
   value       = aws_security_group.database.id
 }
+
+output "vpn_association_subnet_id" {
+  description = "The ID of the subnet for the Client VPN association"
+  value       = aws_subnet.vpn_association.id
+}

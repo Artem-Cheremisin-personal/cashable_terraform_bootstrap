@@ -256,6 +256,10 @@ echo "*.eu-central-1.compute.internal"
 chown puppet:puppet /etc/puppetlabs/puppet/autosign.conf
 chmod 644 /etc/puppetlabs/puppet/autosign.conf
 
+# Restart server to apply autosign config
+echo "Restarting Puppet Server to apply autosign.conf changes..."
+systemctl restart puppetserver
+
 # Configure firewall for Puppet Server
 firewall-cmd --permanent --add-port=8140/tcp
 firewall-cmd --reload

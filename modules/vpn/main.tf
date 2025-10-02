@@ -56,6 +56,8 @@ resource "tls_cert_request" "server" {
   subject {
     common_name = "cashabl-vpn-server"
   }
+
+  dns_names = ["vpn.internal"]
 }
 
 resource "tls_locally_signed_cert" "server" {
@@ -144,7 +146,8 @@ resource "aws_ec2_client_vpn_endpoint" "this" {
   description            = "Client VPN for ${var.vpn_name}"
   server_certificate_arn = aws_acm_certificate.server.arn
   client_cidr_block      = var.client_cidr
-  dns_servers            = ["8.8.8.8", "8.8.4.4"]
+  dns_servers            = [var.vpc_dns_resolver, "8.8.8.8", "8.8.4.4", "1.1.1.1"]
+  split_tunnel           = true
 
   authentication_options {
     type                       = "certificate-authentication"
@@ -176,12 +179,30 @@ resource "aws_ec2_client_vpn_authorization_rule" "db_access" {
   description            = "Allow access to database subnets only"
 }
 
+# Authorization rule to allow internet access
+resource "aws_ec2_client_vpn_authorization_rule" "internet_access" {
+  client_vpn_endpoint_id = aws_ec2_client_vpn_endpoint.this.id
+  target_network_cidr    = "0.0.0.0/0"
+  authorize_all_groups   = true
+  description            = "Allow internet access through VPN"
+}
+
 # Route to DATABASE subnets only (not entire VPC)
 resource "aws_ec2_client_vpn_route" "db_route" {
   client_vpn_endpoint_id = aws_ec2_client_vpn_endpoint.this.id
   destination_cidr_block = var.db_subnet_cidr
   target_vpc_subnet_id   = var.subnet_id
   description            = "Route to database subnets only"
+
+  depends_on = [aws_ec2_client_vpn_network_association.this]
+}
+
+# Route for internet access through VPN subnet
+resource "aws_ec2_client_vpn_route" "internet_route" {
+  client_vpn_endpoint_id = aws_ec2_client_vpn_endpoint.this.id
+  destination_cidr_block = "0.0.0.0/0"
+  target_vpc_subnet_id   = var.subnet_id
+  description            = "Route internet traffic through VPN subnet"
 
   depends_on = [aws_ec2_client_vpn_network_association.this]
 }

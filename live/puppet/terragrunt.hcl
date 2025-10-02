@@ -8,38 +8,18 @@ terraform {
 
 dependency "vpc" {
   config_path = "../vpc"
-  
-  mock_outputs = {
-    vpc_id = "vpc-mockid123"
-    puppet_management_subnet_ids = ["subnet-mock-puppet"]
-    puppet_server_sg_id = "sg-mock-puppet"
-  }
 }
 
 dependency "iam" {
   config_path = "../iam"
-  
-  mock_outputs = {
-    instance_profile_name = "mock-instance-profile"
-  }
 }
 
 dependency "route53" {
   config_path = "../route53"
-  
-  mock_outputs = {
-    alb_dns_name = "app-alb.internal.cashabl.local"
-    hosted_zone_id = "Z123456789"
-    puppet_server_record_name = "puppet-server"
-  }
 }
 
 dependency "aurora" {
   config_path = "../aurora_postgress"
-  
-  mock_outputs = {
-    database_connection_secret_arn = "arn:aws:secretsmanager:eu-central-1:123456789012:secret:mock-secret"
-  }
 }
 
 inputs = {

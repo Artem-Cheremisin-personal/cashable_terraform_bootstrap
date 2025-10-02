@@ -5,7 +5,7 @@ data "aws_ami" "this" {
 
   filter {
     name   = "name"
-    values = ["al2023-ami-*-x86_64"]
+    values = ["al2023-ami-2023.*-kernel-*-x86_64"]
   }
 
   filter {
@@ -55,7 +55,7 @@ resource "aws_launch_template" "this" {
 resource "aws_autoscaling_group" "this" {
   name                = "${var.name}-asg"
   vpc_zone_identifier = var.subnets
-  target_group_arns   = [aws_lb_target_group.this.arn]
+  target_group_arns   = var.target_group_arns
   health_check_type   = "EC2"  # Changed from ELB to EC2 to prevent killing unhealthy instances
   health_check_grace_period = var.health_check_grace_period
 
@@ -84,26 +84,3 @@ resource "aws_autoscaling_group" "this" {
   }
 }
 
-# Target Group
-resource "aws_lb_target_group" "this" {
-  name     = "${var.name}-tg"
-  port     = var.target_group_port
-  protocol = var.target_group_protocol
-  vpc_id   = var.vpc_id
-
-  health_check {
-    enabled             = true
-    healthy_threshold   = var.health_check_healthy_threshold
-    interval            = var.health_check_interval
-    matcher             = var.health_check_matcher
-    path                = var.health_check_path
-    port                = "traffic-port"
-    protocol            = var.target_group_protocol
-    timeout             = var.health_check_timeout
-    unhealthy_threshold = var.health_check_unhealthy_threshold
-  }
-
-  tags = merge(var.tags, {
-    Name = "${var.name}-tg"
-  })
-}

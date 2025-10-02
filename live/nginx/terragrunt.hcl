@@ -6,38 +6,29 @@ terraform {
   source = "../../modules/ec2"
 }
 
+# Access global variables from root
+locals {
+  root_vars = read_terragrunt_config(find_in_parent_folders())
+}
+
 dependency "vpc" {
   config_path = "../vpc"
-  
-  mock_outputs = {
-    vpc_id = "mock-vpc-id"
-    nginx_subnet_ids = ["mock-subnet-1", "mock-subnet-2"]
-    nginx_sg_id = "mock-sg-id"
-  }
 }
 
 dependency "iam" {
   config_path = "../iam"
-  
-  mock_outputs = {
-    instance_profile_name = "mock-instance-profile"
-  }
 }
 
 dependency "puppet" {
   config_path = "../puppet"
-  
-  mock_outputs = {
-    puppet_server_private_ip = "10.0.1.130"
-  }
 }
 
 dependency "route53" {
   config_path = "../route53"
-  
-  mock_outputs = {
-    alb_dns_name = "app-alb.internal.cashabl.local"
-  }
+}
+
+dependency "nginx_lb" {
+  config_path = "../nginx_lb"
 }
 
 inputs = {
@@ -58,18 +49,20 @@ inputs = {
   security_groups = [dependency.vpc.outputs.nginx_sg_id]
   
   # IAM role
-  iam_instance_profile = dependency.iam.outputs.instance_profile_name
+  iam_instance_profile = dependency.iam.outputs.nginx_instance_profile_name
   
-  # Puppet configuration - use dynamic IP from Puppet server output
-  puppet_server_ip = dependency.puppet.outputs.puppet_server_private_ip
-  install_puppet_agent = true
+  # Use target group created by nginx_lb
+  target_group_arns = [dependency.nginx_lb.outputs.target_group_arn]
   
-  # APP Load Balancer DNS for proxy configuration - using Route 53 static name
-  app_lb_dns = dependency.route53.outputs.alb_dns_name
-  
+  # Puppet configuration - enabled to use puppet server
+  puppet_enabled = true
+  puppet_server = local.root_vars.inputs.puppet_server_hostname
+  puppet_environment = "production"
+  puppet_certname = "nginx-app"
+                                                                  
   tags = {
-    Name = "cashabl-nginx"
+    Name = "cashabl-nginx"                                                 
     Application = "cashabl"
-    Tier = "nginx"
+    Tier = "nginx"                                                                          
   }
 }

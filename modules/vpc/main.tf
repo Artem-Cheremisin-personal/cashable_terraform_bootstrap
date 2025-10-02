@@ -33,8 +33,6 @@ resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
 }
 
-# Public Subnet
-# Public Subnet for VPN
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = cidrsubnet(var.cidr, 12, 0)
@@ -42,7 +40,7 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 }
 
-# VPN Load Balancer subnets (/28)
+# VPN Load Balancer subnets 
 resource "aws_subnet" "vpn_load_balancer" {
   count             = 2
   vpc_id            = aws_vpc.main.id
@@ -63,7 +61,15 @@ resource "aws_subnet" "puppet_management" {
   cidr_block        = cidrsubnet(var.cidr, 12, 24)
   availability_zone = data.aws_availability_zones.available.names[0]
 }
-# NGINX subnets 
+
+# Subnet for Client VPN association
+resource "aws_subnet" "vpn_association" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = cidrsubnet(var.cidr, 11, 25) 
+  availability_zone       = data.aws_availability_zones.available.names[0]
+  map_public_ip_on_launch = true
+}
+
 resource "aws_subnet" "nginx" {
   count             = 2
   vpc_id            = aws_vpc.main.id
@@ -97,7 +103,7 @@ resource "aws_db_subnet_group" "aurora" {
   }
 }
 
-# NAT Gateway for App private subnets
+# NAT Gateway for private subnets
 resource "aws_eip" "nat" {
   domain = "vpc"
 }
@@ -142,7 +148,26 @@ resource "aws_route_table_association" "puppet_assoc" {
   route_table_id = aws_route_table.private.id
 }
 
-# Security Groups - created without cross-references to avoid cycles
+# Route table associations for nginx subnets (use private route table with NAT gateway)
+resource "aws_route_table_association" "nginx_assoc" {
+  count          = 2
+  subnet_id      = aws_subnet.nginx[count.index].id
+  route_table_id = aws_route_table.private.id
+}
+
+# Route table associations for VPN Load Balancer subnets (make them public for internet-facing ALB)
+resource "aws_route_table_association" "vpn_lb_assoc" {
+  count          = 2
+  subnet_id      = aws_subnet.vpn_load_balancer[count.index].id
+  route_table_id = aws_route_table.public.id
+}
+
+# Route table association for the new VPN subnet
+resource "aws_route_table_association" "vpn_assoc" {
+  subnet_id      = aws_subnet.vpn_association.id
+  route_table_id = aws_route_table.public.id
+}
+
 resource "aws_security_group" "puppet_server" {
   name_prefix = "puppet-server-"
   description = "Security group for Puppet server"
@@ -165,6 +190,13 @@ resource "aws_security_group" "nginx" {
   description = "Security group for NGINX instances"
   vpc_id      = aws_vpc.main.id
 
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   tags = {
     Name = "nginx-sg"
   }
@@ -180,7 +212,7 @@ resource "aws_security_group" "app" {
   }
 }
 
-# NGINX LB Security Group - accepts traffic on port 80 from public subnet only
+# NGINX LB Security Group - accepts traffic on port 80 from anywhere
 resource "aws_security_group" "nginx_lb" {
   name_prefix = "nginx-lb-"
   description = "Security group for NGINX LB (public traffic)"
@@ -248,34 +280,14 @@ resource "aws_security_group_rule" "puppet_server_ingress" {
   security_group_id = aws_security_group.puppet_server.id
 }
 
-# Removed invalid egress rules (source_security_group_id only valid for ingress). Puppet server ingress by CIDR already permits app/nginx subnets.
-
-# Allow app instances to access internet for SSM, package downloads, etc.
-resource "aws_security_group_rule" "app_https_egress" {
+# Allow all outbound traffic for app instances
+resource "aws_security_group_rule" "app_all_egress" {
   type              = "egress"
-  from_port         = 443
-  to_port           = 443
-  protocol          = "tcp"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
   cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = aws_security_group.app.id
-}
-
-resource "aws_security_group_rule" "app_http_egress" {
-  type              = "egress"
-  from_port         = 80
-  to_port           = 80
-  protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.app.id
-}
-
-resource "aws_security_group_rule" "app_to_puppet_egress" {
-  type                             = "egress"
-  from_port                        = 8140
-  to_port                          = 8140
-  protocol                         = "tcp"
-  cidr_blocks                      = ["0.0.0.0/0"]
-  security_group_id                = aws_security_group.app.id
 }
 
 resource "aws_security_group_rule" "app_from_lb" {
@@ -292,8 +304,17 @@ resource "aws_security_group_rule" "nginx_lb_ingress" {
   from_port         = 80
   to_port           = 80
   protocol          = "tcp"
-  cidr_blocks       = [aws_subnet.public.cidr_block]
+  cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = aws_security_group.nginx_lb.id
+}
+
+resource "aws_security_group_rule" "nginx_from_lb" {
+  type                     = "ingress"
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.nginx_lb.id
+  security_group_id        = aws_security_group.nginx.id
 }
 
 resource "aws_security_group_rule" "app_lb_from_nginx" {
@@ -320,6 +341,15 @@ resource "aws_security_group_rule" "database_from_vpn" {
   from_port         = 5432
   to_port           = 5432
   protocol          = "tcp"
-  cidr_blocks       = ["10.10.0.0/16"]  # VPN client CIDR block
+  cidr_blocks       = [var.vpn_client_cidr]  # VPN client CIDR block
+  security_group_id = aws_security_group.database.id
+}
+
+resource "aws_security_group_rule" "database_from_vpn_subnet" {
+  type              = "ingress"
+  from_port         = 5432
+  to_port           = 5432
+  protocol          = "tcp"
+  cidr_blocks       = [aws_subnet.vpn_association.cidr_block]  # VPN association subnet
   security_group_id = aws_security_group.database.id
 }

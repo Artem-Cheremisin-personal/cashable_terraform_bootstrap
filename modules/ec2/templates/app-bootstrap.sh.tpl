@@ -11,7 +11,9 @@ echo "Starting App bootstrap at $(date)"
 dnf update -y
 
 # Set environment variables for the application
+%{ if db_secret_arn != null ~}
 echo "export DB_SECRET_ARN=${db_secret_arn}" >> /etc/environment
+%{ endif ~}
 echo "export AWS_DEFAULT_REGION=${aws_region}" >> /etc/environment
 
 # Install Git and other dependencies (skip GPG checks for reliability)
@@ -112,14 +114,17 @@ echo "Bootstrapping SSL certificates..."
 env PATH="/opt/puppetlabs/bin:$PATH" /opt/puppetlabs/bin/puppet ssl bootstrap --server ${puppet_server} --waitforcert 300
 
 # Run Puppet immediately to configure the node (with retries and proper locking)
+# A successful puppet run that makes changes will exit with 2. We need to handle this.
 for i in {1..3}; do
     echo "Puppet run attempt $i..."
     # Use full path and proper environment
-    if env PATH="/opt/puppetlabs/bin:$PATH" /opt/puppetlabs/bin/puppet agent --test --server ${puppet_server} --no-daemonize --onetime --verbose; then
+    env PATH="/opt/puppetlabs/bin:$PATH" /opt/puppetlabs/bin/puppet agent --test --server ${puppet_server} --no-daemonize --onetime --verbose
+    PUPPET_EXIT_CODE=$?
+    if [ $PUPPET_EXIT_CODE -eq 0 ] || [ $PUPPET_EXIT_CODE -eq 2 ]; then
         echo "Puppet run successful!"
         break
     else
-        echo "Puppet run $i failed, retrying in 45 seconds..."
+        echo "Puppet run $i failed with exit code $PUPPET_EXIT_CODE, retrying in 45 seconds..."
         sleep 45
     fi
 done

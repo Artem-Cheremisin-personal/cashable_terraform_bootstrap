@@ -15,27 +15,27 @@ dependency "route53" {
 }
 
 inputs = {
-  # ALB Configuration for NGINX Load Balancer
-  name = "cashabl-nginx-alb"
+  # ALB Configuration for App Load Balancer
+  name = "cashabl-app-alb"
   
   # AWS region
   region = "eu-central-1"
   
-  # Make it internet-facing (internal = false by default)
-  internal = false
+  # Make it internal (for backend services)
+  internal = true
   
-  # Use VPN load balancer subnets (now configured as public) for internet-facing load balancer
-  subnets = dependency.vpc.outputs.vpn_lb_subnet_ids
+  # Use backend load balancer subnets (internal)
+  subnets = dependency.vpc.outputs.backend_lb_subnet_ids
   
-  # Use nginx load balancer security group
-  security_groups = [dependency.vpc.outputs.nginx_lb_sg_id]
+  # Use app load balancer security group
+  security_groups = [dependency.vpc.outputs.app_lb_sg_id]
   
-  # VPC configuration using outputs
+  # VPC configuration
   vpc_id = dependency.vpc.outputs.vpc_id
   
   # Target group configuration - created by ALB module
-  target_group_name = "cashabl-nginx-tg"
-  target_group_port = 80
+  target_group_name = "cashabl-app-tg"
+  target_group_port = 5000
   target_group_protocol = "HTTP"
   
   # Health check configuration
@@ -46,7 +46,7 @@ inputs = {
   health_check_timeout = 5
   health_check_unhealthy_threshold = 5
   
-  # NGINX ALB Listener configuration
+  # Configure listener to forward to app target group
   listeners = [
     {
       port = 80
@@ -57,8 +57,12 @@ inputs = {
     }
   ]
   
+  # Route53 configuration
+  route53_zone_id = dependency.route53.outputs.private_zone_id
+  route53_record_name = "app-alb"
+  
   tags = {
     Application = "cashabl"
-    Name = "cashabl-nginx-alb"
+    Name = "cashabl-app-alb"
   }
 }

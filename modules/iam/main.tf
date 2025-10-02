@@ -154,3 +154,43 @@ resource "aws_iam_instance_profile" "puppet_server_profile" {
 
   tags = var.tags
 }
+
+# Nginx IAM Role (with same permissions as puppet server)
+resource "aws_iam_role" "nginx_role" {
+  name = "${var.role_name}-nginx"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = var.tags
+}
+
+# Attach SSM managed policy to nginx role
+resource "aws_iam_role_policy_attachment" "nginx_ssm_attachment" {
+  role       = aws_iam_role.nginx_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+# Attach EC2 Describe Tags policy to Nginx role
+resource "aws_iam_role_policy_attachment" "nginx_ec2_describe_tags_attachment" {
+  role       = aws_iam_role.nginx_role.name
+  policy_arn = aws_iam_policy.ec2_describe_tags_policy.arn
+}
+
+# Instance Profile for Nginx
+resource "aws_iam_instance_profile" "nginx_profile" {
+  name = "${var.role_name}-nginx-instance-profile"
+  role = aws_iam_role.nginx_role.name
+
+  tags = var.tags
+}

@@ -1,3 +1,7 @@
+provider "aws" {
+  region = var.region
+}
+
 # Application Load Balancer
 resource "aws_lb" "this" {
   name               = var.name
@@ -22,8 +26,8 @@ resource "aws_lb_listener" "this" {
   certificate_arn   = each.value.protocol == "HTTPS" ? each.value.certificate_arn : null
 
   default_action {
-    type             = var.app_target_group_arn != "" ? "forward" : each.value.default_action.type
-    target_group_arn = var.app_target_group_arn != "" ? var.app_target_group_arn : (each.value.default_action.type == "forward" ? each.value.default_action.target_group_arn : null)
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.this.arn
 
     dynamic "fixed_response" {
       for_each = each.value.default_action.type == "fixed-response" ? [1] : []
@@ -47,12 +51,40 @@ resource "aws_lb_listener" "this" {
   tags = var.tags
 }
 
-# Route 53 CNAME record to point to ALB
-resource "aws_route53_record" "alb_cname" {
+# Target Group - created here to avoid circular dependencies
+resource "aws_lb_target_group" "this" {
+  name     = var.target_group_name
+  port     = var.target_group_port
+  protocol = var.target_group_protocol
+  vpc_id   = var.vpc_id
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = var.health_check_healthy_threshold
+    interval            = var.health_check_interval
+    matcher             = var.health_check_matcher
+    path                = var.health_check_path
+    port                = "traffic-port"
+    protocol            = var.target_group_protocol
+    timeout             = var.health_check_timeout
+    unhealthy_threshold = var.health_check_unhealthy_threshold
+  }
+
+  tags = merge(var.tags, {
+    Name = var.target_group_name
+  })
+}
+
+# Route 53 ALIAS record to point to ALB
+resource "aws_route53_record" "alb_alias" {
   count   = var.route53_zone_id != "" && var.route53_record_name != "" ? 1 : 0
   zone_id = var.route53_zone_id
   name    = var.route53_record_name
-  type    = "CNAME"
-  ttl     = 300
-  records = [aws_lb.this.dns_name]
+  type    = "A"
+
+  alias {
+    name                   = aws_lb.this.dns_name
+    zone_id                = aws_lb.this.zone_id
+    evaluate_target_health = true
+  }
 }

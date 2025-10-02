@@ -7,6 +7,7 @@ terraform {
 }
 
 inputs = {
-  region = "eu-central-1"
-  cidr   = "192.168.0.0/16"
+  region            = "eu-central-1"
+  cidr               = "192.168.0.0/16"
+  vpn_client_cidr = "10.10.0.0/16"
 }

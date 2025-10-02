@@ -37,7 +37,7 @@ data "aws_ami" "this" {
 
   filter {
     name   = "name"
-    values = ["al2023-ami-*-x86_64"]
+    values = ["al2023-ami-2023.*-kernel-*-x86_64"]
   }
 
   filter {
