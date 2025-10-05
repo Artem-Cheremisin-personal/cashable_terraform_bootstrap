@@ -10,12 +10,8 @@ To further enhance the robustness, security, and scalability of the infrastructu
 
 3.  **Centralized Logging and Monitoring**:
     *   **CloudWatch Agent**: Deploy the CloudWatch agent to all instances to stream systemd logs, application logs, and custom metrics to CloudWatch for centralized monitoring, analysis, and alerting.
-    *   **APM**: Integrate an Application Performance Monitoring (APM) tool to get deeper insights into application performance and trace requests.
 
 4.  **Enhanced Security**:
     *   **Enable HTTPS**: Provision and install SSL/TLS certificates (e.g., using AWS Certificate Manager) on the Application Load Balancer to secure the web application with HTTPS.
     *   **Dedicated Database User**: Create a dedicated, least-privilege IAM role and database user for the application instead of using a default or administrative user.
     *   **Web Application Firewall (WAF)**: Integrate AWS WAF with the Application Load Balancer to protect against common web exploits like SQL injection and cross-site scripting.
-
-5.  **CI/CD Automation**:
-    *   **Automated Pipelines**: Implement a full CI/CD pipeline (e.g., using AWS CodePipeline or GitHub Actions) to automate the testing and deployment of both the infrastructure (Terraform/Terragrunt) and the application code.
