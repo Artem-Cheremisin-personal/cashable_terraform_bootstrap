@@ -122,9 +122,9 @@ WantedBy=multi-user.target
 ```
 
 **Key Configuration Details:**
-- **Working Directory**: `/opt/cashabl-app` (not `/opt/app`)
-- **User**: `ec2-user` (not `app`)
-- **Database Access**: Uses `DB_SECRET_ARN` environment variable (not direct URL)
+- **Working Directory**: `/opt/cashabl-app`
+- **User**: `ec2-user`
+- **Database Access**: Uses `DB_SECRET_ARN` environment variable 
 - **Application Source**: Cloned from Git repository
 - **Dependencies**: Installed from `requirements.txt`
 
@@ -205,9 +205,9 @@ http {
 ```
 
 **Key Configuration Details:**
-- **Architecture**: Nginx proxies to Application Load Balancer (not directly to app servers)
-- **Configuration**: Uses main `/etc/nginx/nginx.conf` (not sites-available/enabled)
-- **Upstream**: Points to `${alb_dns_name}:80` (ALB endpoint)
+- **Architecture**: Nginx proxies to Application Load Balancer 
+- **Configuration**: Uses main `/etc/nginx/nginx.conf` 
+- **Upstream**: Points to `${alb_dns_name}:80` 
 - **Health Check**: Returns "OK" at `/health` endpoint
 
 
